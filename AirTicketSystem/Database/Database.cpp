@@ -150,10 +150,7 @@ bool Database::deleteOne(const InfoType &info_type, string filter) {
         auto f_view = bsoncxx::from_json(filter);  //将 Json 数据转成 Bson 文档
         try {
             if (info_type == User_Info) {
-                //result：插入文档函数的返回值
-                //插入一个文档
                 delete_result result = user_conn.delete_one(f_view.view());
-                //打印结果
                 printResult(result);
                 return true;
                 
@@ -253,7 +250,7 @@ string Database::readOne(const InfoType &info_type, string filter) {
                     return bsoncxx::to_json(*val);
                 } else return nullptr;
                 }
-            } catch (mongocxx::bulk_write_exception &err) {
+            } catch (mongocxx::query_exception &err) {
                 
                     printException("When delete a document throw exception", err);
                     return nullptr;
@@ -269,25 +266,67 @@ string Database::readOne(const InfoType &info_type, string filter) {
 }
 
 std::vector<string> Database::readMany(const InfoType &info_type, string filter) {
+    std::vector<string> docs;
+    if (filter.empty()) {
+        if (info_type == User_Info) {
+            mongocxx::cursor cursor = findAllDoc(user_conn);
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        } else if (info_type == Auth_Info) {
+            mongocxx::cursor cursor = findAllDoc(auth_conn);
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        } else if (info_type == Flight_Info) {
+            mongocxx::cursor cursor = findAllDoc(flight_conn);
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        }
+    } else {
+        if (info_type == User_Info) {
+            mongocxx::cursor cursor = user_conn.find(bsoncxx::from_json(filter));
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        } else if (info_type == Auth_Info) {
+            mongocxx::cursor cursor = auth_conn.find(bsoncxx::from_json(filter));
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        } else if (info_type == Flight_Info) {
+            mongocxx::cursor cursor = flight_conn.find(bsoncxx::from_json(filter));
+            for (auto pTmp : cursor) {
+                docs.push_back(bsoncxx::to_json(pTmp));
+            }
+        }
+    }
     
-    return std::vector<string>{};
+    return docs;
+}
+
+mongocxx::cursor Database::findAllDoc(mongocxx::collection &conn) {
+    try {
+        mongocxx::cursor cursor = conn.find({});
+        return cursor;
+    } catch ( mongocxx::logic_error &err) {
+        throw err;
+    }
 }
 
 void Database::printResult(insert_one_result &result) const noexcept {
     cout << "Insert " << result->result().inserted_count() << " document" << ", object id: "
          << result->inserted_id().get_oid().value.to_string() << endl;
-    
+}
+
+void Database::printResult(update_result &result) const noexcept {
+    cout << "Update " << result->result().modified_count() << " document" << endl;
     
 }
 
-mongocxx::cursor Database::findAllDoc(void) {
-    try {
-        mongocxx::cursor cursor = user_conn.find({});
-        return cursor;
-    } catch ( mongocxx::logic_error &err) {
-        
-        throw err;
-    }
+void Database::printResult(delete_result &result) const noexcept {
+    cout << "Delete " << result->deleted_count() << " document" << endl;
 }
 
 void Database::printException(string failed_string, mongocxx::exception &err) const {
@@ -297,8 +336,6 @@ void Database::printException(string failed_string, mongocxx::logic_error &err) 
     cout << failed_string << ", err_code: " << err.code() << ": " << err.what() << endl;
 }
 
-
-
 void Database::printException(std::string failed_string, mongocxx::bulk_write_exception &err) const { 
     cout << failed_string << ", err_code: " << err.code() << ": " << err.what() << endl;
 }
@@ -307,14 +344,12 @@ void Database::printException(std::string failed_string, bsoncxx::exception &err
     cout << failed_string << ", err_code: " << err.code() << ": " << err.what() << endl;;
 }
 
-void Database::printResult(update_result &result) const noexcept { 
-    cout << "Update " << result->result().modified_count() << " document" << endl;
-    
+void Database::printException(std::string failed_string, mongocxx::query_exception &err) const { 
+    cout << failed_string << ", err_code: " << err.code() << ": " << err.what() << endl;;
 }
 
-void Database::printResult(delete_result &result) const noexcept { 
-    cout << "Delete " << result->deleted_count() << " document" << endl;
-}
+
+
 
 
 

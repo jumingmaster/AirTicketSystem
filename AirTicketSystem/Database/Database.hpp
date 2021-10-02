@@ -22,7 +22,7 @@
 #include <mongocxx/exception/bulk_write_exception.hpp>
 #include <bsoncxx/exception/exception.hpp>
 #include <mongocxx/exception/logic_error.hpp>
-
+#include <mongocxx/exception/query_exception.hpp>
 
 
 using bsoncxx::builder::stream::close_array;
@@ -86,7 +86,7 @@ public:
     bool deleteMany(const InfoType &info_type, std::vector<string> filter);
     string readOne(const InfoType &info_type, string filter);
     std::vector<string> readMany(const InfoType &info_type, string filter);
-    mongocxx::cursor findAllDoc(void);
+    
     
     
 private:
@@ -100,15 +100,19 @@ private:
     //认证数据集合
     mongocxx::collection auth_conn;
     
+    mongocxx::cursor findAllDoc(mongocxx::collection &conn);
+    
     //打印结果
     void printResult(insert_one_result &result) const noexcept;
     void printResult(update_result &result) const noexcept;
     void printResult(insert_many_result &result) const noexcept;
     void printResult(delete_result &result) const noexcept;
+    //打印 exception
     void printException(string failed_string, mongocxx::exception &err) const;
     void printException(string failed_string, mongocxx::logic_error &err) const;
     void printException(string failed_string, mongocxx::bulk_write_exception &err) const;
     void printException(string failed_string, bsoncxx::exception &err) const;
+    void printException(string failed_string, mongocxx::query_exception &err) const;
 };
 
 #endif /* Database_h */
